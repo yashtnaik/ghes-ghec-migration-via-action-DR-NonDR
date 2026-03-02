@@ -26,6 +26,10 @@ scripts/
   2_migration.sh                   # Stage 3: migration runner (parallel)
   3_post_migration_validation.sh   # Stage 4: post-migration validation
 
+  1_migration-readiness.ps1         # Stage 1: pre-migration checks
+  2_migration.ps1                   # Stage 3: migration runner (parallel)
+  3_post_migration_validation.ps1   # Stage 4: post-migration validation
+
   inventory-report.sh              # Generates repos.csv (inventory)
   inventory-report.ps1             # Generates repos.csv (inventory)
 ```
