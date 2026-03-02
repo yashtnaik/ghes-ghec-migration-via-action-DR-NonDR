@@ -99,8 +99,8 @@ parse_csv_line() {
 # Strip a single leading and trailing double-quote if present (no eval)
 strip_quotes() {
   local s="$1"
-  [[ ${s} == "* ]] && s="${s#"}"
-  [[ ${s} == *" ]] && s="${s%"}"
+  [[ ${s} == \"* ]] && s="${s#\"}"
+  [[ ${s} == *\" ]] && s="${s%\"}"
   printf '%s' "$s"
 }
 
@@ -115,7 +115,7 @@ mapfile -t HEADER_FIELDS < <(parse_csv_line "${HEADER_LINE}")
 declare -A COLIDX=()
 for idx in "${!HEADER_FIELDS[@]}"; do
   name="${HEADER_FIELDS[$idx]}"
-  name="${name%"}"; name="${name#"}"
+  name="${name%\"}"; name="${name#\"}"
   COLIDX["$name"]="$idx"
 done
 
@@ -139,7 +139,7 @@ write_migration_status_csv_header() {
 
 append_status_row() {
   # args: ghes_org ghes_repo github_org github_repo gh_repo_visibility status log_file
-  printf '"%s","%s","%s","%s","%s","%s","%s"\n' \
+  printf '\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n' \
     "$1" "$2" "$3" "$4" "$5" "$6" "$7" >> "${OUTPUT_CSV_PATH}"
 }
 
@@ -160,11 +160,11 @@ update_repo_status_in_csv() {
       local cur_log; cur_log="$(strip_quotes "${F[6]}")"
 
       if [[ "${github_repo}" == "${target_repo}" ]]; then
-        printf '"%s","%s","%s","%s","%s","%s","%s"\n' \
+        printf '\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n' \
           "${ghes_org}" "${ghes_repo}" "${github_org}" "${github_repo}" \
           "${gh_repo_visibility}" "${new_status}" "${log_file}"
       else
-        printf '"%s","%s","%s","%s","%s","%s","%s"\n' \
+        printf '\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n' \
           "${ghes_org}" "${ghes_repo}" "${github_org}" "${github_repo}" \
           "${gh_repo_visibility}" "${status}" "${cur_log}"
       fi
@@ -189,23 +189,13 @@ migrate_repository() {
       "$(date)" "${ghes_org}" "${ghes_repo}" "${github_org}" "${github_repo}" "${gh_repo_visibility}" "${GHES_API_URL}"
 
     # Run migration: append output ONLY to log file (no tee to stdout)
-    # Build optional args
-  local -a extra_args=()
-  if [[ "${USE_GITHUB_STORAGE}" == "true" ]]; then
-    extra_args+=(--use-github-storage)
-  fi
-  if [[ -n "${TARGET_API_URL}" ]]; then
-    extra_args+=(--target-api-url "${TARGET_API_URL}")
-  fi
-
-  gh gei migrate-repo \
+    gh gei migrate-repo \
       --github-source-org "${ghes_org}" \
       --source-repo "${ghes_repo}" \
       --github-target-org "${github_org}" \
       --target-repo "${github_repo}" \
       --target-repo-visibility "${gh_repo_visibility}" \
-      --ghes-api-url "${GHES_API_URL}" \
-  "${extra_args[@]}" >>"${log_file}" 2>&1
+      --ghes-api-url "${GHES_API_URL}" >>"${log_file}" 2>&1
 
     # Assess log content (keep same style checks as ADO runner)
     if grep -q "No operation will be performed" "${log_file}"; then
