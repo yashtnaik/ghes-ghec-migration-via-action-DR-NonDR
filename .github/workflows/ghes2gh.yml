@@ -141,30 +141,30 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish pre-validation repo-wise summary (table)
+      - name: Publish pre-validation repo-wise summary (table) ✅ fixed
         if: always()
         shell: bash
         run: |
           python3 - <<'PY'
           import csv, os, re
           from pathlib import Path
-
+      
           pre = Path("precheck.log")
           csv_path = Path("scripts/repos.csv")
           summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
-
+      
           def append(md: str):
             if summary.exists():
               summary.write_text(summary.read_text(encoding="utf-8") + md, encoding="utf-8")
             else:
               summary.write_text(md, encoding="utf-8")
-
+      
           if not pre.exists():
             append("\n> [!CAUTION]\n> precheck.log not found, cannot generate repo-wise pre-validation summary.\n")
             raise SystemExit(0)
-
-          # Map ghes_repo -> ghes_org (and github mapping if you want later)
-          repo_to_orgs = {}
+      
+          # Build mapping ghes_repo -> ghes_org (so we print org/repo even though script prints only repo) [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
+          repo_to_org = {}
           if csv_path.exists():
             with csv_path.open(newline="", encoding="utf-8") as f:
               reader = csv.DictReader(f)
@@ -172,50 +172,60 @@ jobs:
                 repo = (r.get("ghes_repo") or "").strip()
                 org  = (r.get("ghes_org") or "").strip()
                 if repo:
-                  repo_to_orgs.setdefault(repo, set()).add(org or "?")
-
-          # Strip ANSI codes from readiness output [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
+                  repo_to_org[repo] = org or "?"
+      
+          # Strip ANSI color codes (script prints colored strings) [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
           ansi = re.compile(r"\x1b\[[0-9;]*m")
           lines = [ansi.sub("", l.rstrip("\n")) for l in pre.read_text(errors="replace").splitlines()]
-
-          # Find repo-specific section printed by script [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
+      
+          # Locate "Repository-Specific Results:" [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
           start = None
           for i, l in enumerate(lines):
             if l.strip() == "Repository-Specific Results:":
               start = i + 1
               break
-
+      
           if start is None:
-            append("\n> [!CAUTION]\n> Could not find 'Repository-Specific Results:' in precheck.log.\n")
+            append("\n> [!CAUTION]\n> Could not find 'Repository-Specific Results:' section in precheck.log.\n")
             raise SystemExit(0)
-
+      
           results = {}
+          sep_seen = 0
+      
+          # IMPORTANT: the script prints a separator immediately after the header,
+          # then repo lines, then another separator. We skip first, stop at second. [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
           for l in lines[start:]:
-            if l.strip().startswith("=============================") or l.strip().startswith("Migration validation complete"):
-              break
+            s = l.strip()
+            if s.startswith("============================="):
+              sep_seen += 1
+              if sep_seen >= 2:
+                break
+              continue  # skip the first separator
             if ":" in l:
               repo, status = l.split(":", 1)
               results[repo.strip()] = status.strip()
-
+      
+          if not results:
+            append("\n> [!CAUTION]\n> Repo-wise section detected but no repo rows were parsed. Check precheck.log formatting.\n")
+            raise SystemExit(0)
+      
           def cell(ok: bool):
             return "✅" if ok else "⚠️"
-
+      
           append("\n### 📌 Repo-wise pre-migration status\n\n")
           append("| Repository (GHES) | Active PRs | Workflows Running/Queued | Open Issues | Overall |\n")
           append("|---|---|---|---|---|\n")
-
+      
           for repo in sorted(results.keys()):
             status = results[repo]
             has_pr = "Active PR" in status
             has_wf = "Workflow" in status
             has_issues = "Open Issues" in status
             overall = "✅ Clean" if ("No Active/Open Items" in status) else "⚠️ Review required"
-
-            orgs = sorted(repo_to_orgs.get(repo, {"?"}))
-            src = f"{orgs[0]}/{repo}" if len(orgs) == 1 else f"{'/'.join(orgs)}/{repo}"
-
+      
+            src = f"{repo_to_org.get(repo,'?')}/{repo}"
             append(f"| `{src}` | {cell(not has_pr)} | {cell(not has_wf)} | {cell(not has_issues)} | {overall} |\n")
-
+      
           append("\n**Legend:** ✅ = none found, ⚠️ = found items that need review\n")
           PY
 
