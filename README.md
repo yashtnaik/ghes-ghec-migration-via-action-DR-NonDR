@@ -1,90 +1,26 @@
-# GHES ➜ GitHub.com Migration with GitHub Actions (GEI)
+# GHES ➜ GitHub Migration via GitHub Actions (GEI)
 
-This repository provides a **GitHub Actions workflow** to migrate repositories from **GitHub Enterprise Server (GHES)** to **GitHub Enterprise Cloud / GitHub.com** using the **GitHub Enterprise Importer (GEI)** `gh gei` CLI extension.
+This repository automates **repository migration from GitHub Enterprise Server (GHES) to GitHub (GHEC/GitHub.com)** using **GitHub Actions** and **GitHub Enterprise Importer (GEI)**.
 
-It is modeled after an existing *bbs2gh-actions* style workflow: 
-- ✅ Pre-migration readiness checks (open PRs, queued/running workflows, open issues)
-- ✅ Parallel repository migrations (max 5 at a time)
-- ✅ Post-migration validation (branches + commit counts + latest SHA)
+It follows a **staged workflow** pattern similar to bbs2gh-style pipelines:
 
-> **Important**: If your GHES instance is only reachable from your corporate network, run this workflow on a **self-hosted runner** with network access to GHES.
+1. **Pre-migration validation** (readiness checks)
+2. **Manual approval gate** (issue-based approval)
+3. **Migration execution**
+4. **Post-migration validation** (branch + commit + SHA verification)
 
 ---
 
-## Repo layout
+## Repository layout
 
-```
-.github/workflows/ghes2gh.yml   # Main workflow
-repos.csv                       # Input list
+```text
+.github/workflows/
+  ghes2gh-staged.yml           # Main staged workflow (pre -> approval -> migrate -> post)
 scripts/
-  1_migration-readiness.sh
-  2_migration.sh
-  3_post_migration_validation.sh
-```
-
----
-
-## Required secrets
-
-Create these repository secrets in **Settings → Secrets and variables → Actions**:
-
-| Secret | Used for |
-|---|---|
-| `GH_TOKEN` | Auth for `gh` CLI in the workflow (recommended: same value as `GH_PAT`) |
-| `GH_PAT` | Target GitHub token (destination org; needs migrator/owner access) |
-| `GH_SOURCE_PAT` | Source GHES token |
-| `GHES_API_URL` | GHES REST API base URL, e.g. `https://ghe.example.com/api/v3` |
-
----
-
-## `repos.csv` format
-
-The scripts expect the following header names (order can vary, extra columns allowed):
-
-```csv
-ghes_org,ghes_repo,repo_url,repo_size_MB,github_org,github_repo,gh_repo_visibility
-```
-
-Only these are required by the migration runner:
-- `ghes_org`, `ghes_repo` (source)
-- `github_org`, `github_repo`, `gh_repo_visibility` (target)
-
-See the sample file at [`repos.csv`](./repos.csv).
-
----
-
-## Running the workflow
-
-1. Commit your filled `repos.csv`.
-2. Go to **Actions → GHES to GitHub Migration (GEI) → Run workflow**.
-3. Choose inputs:
-   - **max_concurrent**: keep `<= 5`.
-   - **use_github_storage**: `true` to pass `--use-github-storage` to GEI.
-   - **target_api_url**: optional, for GHE.com data-residency (example: `https://api.SUBDOMAIN.ghe.com`).
-
-Artifacts uploaded after the run:
-- `repo_migration_output.csv` (status per repo)
-- `migration-*.txt` (per-repo migration logs)
-- `validation-log-YYYYMMDD.txt` (validation summary)
-- `validation-*.json` (target repo info snapshots)
-
----
-
-## Notes / prerequisites
-
-- GitHub recommends using the **GitHub CLI** for most GEI migrations, while the API is for advanced automation.  
-- You need sufficient permissions to run migrations (owner or **migrator role**) and PATs with the correct scopes in both source and destination.  
-
----
-
-## Troubleshooting
-
-- **401/403 errors**: make sure your PATs have correct scopes and are authorized for SSO if your org uses SAML.
-- **Cannot reach GHES**: use a **self-hosted runner** inside the network.
-- **Rate limits**: GitHub Cloud enforces rate limits that may not exist on GHES.
-
----
-
-## License
-
-Add a license if you plan to publish this repository.
+  1_migration-readiness.sh     # Stage 1: pre-migration checks [1](https://oneuptime.com/blog/post/2026-01-25-github-actions-environment-protection-rules/view)
+  2_migration.sh               # Stage 2: migration runner (parallel) [2](https://www.youtube.com/watch?v=LS2lq1vMFws)
+  3_post_migration_validation.sh  # Stage 3: post-migration validation [3](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
+  inventory-report.sh          # Generates repos.csv (inventory)
+  inventory-report.ps1         # Generates repos.csv (inventory)
+repos.csv                       # Input list (can be generated via inventory scripts)
+``
