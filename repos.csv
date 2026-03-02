@@ -1,0 +1,3 @@
+# NOTE: Keep header names exactly as shown. Additional columns are allowed.
+ghes_org,ghes_repo,repo_url,repo_size_MB,github_org,github_repo,gh_repo_visibility
+example-ghes-org,example-repo,https://ghe.example.com/example-ghes-org/example-repo,123,example-target-org,example-repo,private
