@@ -348,6 +348,28 @@ jobs:
             --output repo_migration_output.csv \
             | tee migration.log
 
+      - name: Capture Octoshift (gh gei) logs into tar
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+      
+          mkdir -p octoshift-logs
+      
+          # Capture ONLY the files you showed (octoshift logs created in execution dir)
+          cp -v *.octoshift*.log octoshift-logs/ 2>/dev/null || true
+      
+          # (Optional but useful) include your workflow logs too
+          cp -v migration.log repo_migration_output.csv octoshift-logs/ 2>/dev/null || true
+          cp -v migration-*.txt octoshift-logs/ 2>/dev/null || true
+      
+          # Create tar.gz
+          tar -czf octoshift-logs.tgz octoshift-logs
+      
+          echo "## 📦 Octoshift logs captured" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Included: \`*.octoshift*.log\` (plus migration outputs if present)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: \`octoshift-logs.tgz\`" >> "$GITHUB_STEP_SUMMARY"
+    
       - name: Publish migration summary (repo-wise + migrated links)
         if: always()
         shell: bash
@@ -411,6 +433,7 @@ jobs:
             migration.log
             repo_migration_output.csv
             migration-*.txt
+            octoshift-logs.tgz
           if-no-files-found: warn
 
   # ------------------------------------------------------------
