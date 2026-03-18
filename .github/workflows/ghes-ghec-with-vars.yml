@@ -654,6 +654,38 @@ jobs:
           cp "${{ inputs.csv_path }}" scripts/repos.csv
           echo "✅ CSV copied: ${{ inputs.csv_path }} → scripts/repos.csv"
 
+      - name: Debug tokens and org vars API (Stage 4 only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "GH_PAT length: ${#GH_PAT}"
+          echo "GH_SOURCE_PAT length: ${#GH_SOURCE_PAT}"
+          echo "GHES_API_URL: ${GHES_API_URL}"
+
+          # show gh config/auth state (no secrets printed)
+          gh --version
+          gh auth status || true
+
+          # Derive SOURCE_HOST the same way script does
+          SOURCE_HOST="$GHES_API_URL"
+          [[ "$SOURCE_HOST" != *"://"* ]] && SOURCE_HOST="https://$SOURCE_HOST"
+          SOURCE_HOST="${SOURCE_HOST#*://}"
+          SOURCE_HOST="${SOURCE_HOST%%/*}"
+          echo "SOURCE_HOST=$SOURCE_HOST"
+
+          # Now call org vars endpoints with headers so we see the HTTP status
+          echo "Testing GHES org vars list (should be 200)..."
+          GH_TOKEN="$GH_SOURCE_PAT" gh api --hostname "$SOURCE_HOST" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -i "/orgs/${SRC_ORG:-ghes-factory-demo}/actions/variables" || true
+
+          echo "Testing GHEC target org vars list (should be 200)..."
+          GH_TOKEN="$GH_PAT" gh api --hostname github.com \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -i "/orgs/${TGT_ORG:-test-19-yash}/actions/variables" || true
+            
       - name: Run vars migration script
         shell: bash
         run: |
