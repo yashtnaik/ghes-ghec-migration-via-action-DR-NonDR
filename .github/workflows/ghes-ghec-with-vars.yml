@@ -57,21 +57,23 @@ on:
         type: choice
         options: ["true","false"]
 
-      # ✅ NEW: Stage 4 toggle (vars migration)
-      run_vars_migration:
-        description: "Run Stage 4: migrate org/repo/env variables (GHES → GHEC)"
-        required: true
-        default: "false"
-        type: choice
-        options: ["true","false"]
-
-      # ✅ NEW: Approval after post-validation (before vars migration)
+      # ✅ Approval after post-validation (before vars migration)
       require_vars_approval:
         description: "Require approval between Stage 3 and Stage 4"
         required: true
         default: "true"
         type: choice
         options: ["true","false"]
+        
+      # ✅ Stage 4 toggle (vars migration)
+      run_vars_migration:
+        description: "Run Stage 4: migrate org/repo/env variables (GHES → GHEC)"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true","false"]
+
+
 
 permissions:
   contents: read
@@ -700,7 +702,7 @@ jobs:
           set -euo pipefail
           # Your script defaults CSV_FILE=repos.csv, so we explicitly point it to scripts/repos.csv
           export CSV_FILE="scripts/repos.csv"
-          ./scripts/ghes-ghec-var_mig.sh 2>&1 | tee vars_migration.log
+          ./scripts/4_ghes-ghec-var_mig.sh 2>&1 | tee vars_migration.log
       
       - name: Publish Stage 4 vars migration summary
         if: always()
@@ -767,7 +769,7 @@ jobs:
       #     {
       #       echo "## 🔁 Stage 4 - Variables Migration"
       #       echo ""
-      #       echo "- **Script:** \`scripts/ghes-ghec-var_mig.sh\`"
+      #       echo "- **Script:** \`scripts/4_ghes-ghec-var_mig.sh\`"
       #       echo "- **CSV_FILE:** \`scripts/repos.csv\`"
       #       echo "- **Log Artifact:** \`vars_migration.log\`"
       #     } >> "$GITHUB_STEP_SUMMARY"
