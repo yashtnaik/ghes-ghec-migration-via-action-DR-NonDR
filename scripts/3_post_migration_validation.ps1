@@ -18,6 +18,8 @@ if ([string]::IsNullOrWhiteSpace($env:GH_SOURCE_PAT)) { throw "GH_SOURCE_PAT env
 if ([string]::IsNullOrWhiteSpace($env:GH_PAT))        { throw "GH_PAT environment variable is not set" }
 if ([string]::IsNullOrWhiteSpace($env:GHES_API_URL))  { throw "GHES_API_URL environment variable is not set (e.g. https://ghe.example.com/api/v3)" }
 
+$TARGET_HOST = if ($env:GH_TARGET_HOST) { $env:GH_TARGET_HOST } else { "github.com" }
+$env:GH_HOST = $TARGET_HOST
 $GHES_API_URL = $env:GHES_API_URL.TrimEnd('/')
 
 function Get-NextLink {
