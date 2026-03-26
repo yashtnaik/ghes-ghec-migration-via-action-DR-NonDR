@@ -85,6 +85,7 @@ env:
   GH_PAT: ${{ secrets.GH_PAT }}
   GH_SOURCE_PAT: ${{ secrets.GH_SOURCE_PAT }}
   GHES_API_URL: ${{ secrets.GHES_API_URL }}
+  GH_TARGET_HOST: ${{ secrets.GH_TARGET_HOST }}
 
 jobs:
   # ------------------------------------------------------------
@@ -343,6 +344,7 @@ jobs:
       - name: Run migration (parallel)
         shell: bash
         run: |
+          GH_TARGET_HOST="$GH_TARGET_HOST"
           set -euo pipefail
           ./scripts/2_migration.sh \
             --max-concurrent "${{ inputs.max_concurrent }}" \
@@ -479,6 +481,7 @@ jobs:
       - name: Run post-migration validation
         shell: bash
         run: |
+          GH_TARGET_HOST="$GH_TARGET_HOST"
           set -euo pipefail
           ./scripts/3_post_migration_validation.sh |
           tee post_validation.log
@@ -699,6 +702,7 @@ jobs:
       - name: Run vars migration script
         shell: bash
         run: |
+          GH_TARGET_HOST="$GH_TARGET_HOST"
           set -euo pipefail
           # Your script defaults CSV_FILE=repos.csv, so we explicitly point it to scripts/repos.csv
           export CSV_FILE="scripts/repos.csv"
