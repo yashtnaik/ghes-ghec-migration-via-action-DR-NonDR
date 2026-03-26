@@ -482,6 +482,7 @@ jobs:
         shell: bash
         run: |
           GH_TARGET_HOST="$GH_TARGET_HOST"
+          echo $GH_PAT | gh auth login --hostname $GH_TARGET_HOST --with-token
           set -euo pipefail
           ./scripts/3_post_migration_validation.sh |
           tee post_validation.log
