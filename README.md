@@ -113,24 +113,6 @@ Required columns for migration:
 - `reviewer` (for protection rule migration in ENV)
 
 ---
-
-# 📦 External Storage Auto-Detection
-
-The migration scripts and workflows included in this repository support the use of **external object storage** for migration archives.
-
-If any of the below environment variables are detected at runtime, the migration commands will **automatically switch to using external storage** instead of GitHub-managed storage.
-
-In such cases, the scripts will internally:
-
-- ✅ Configure the appropriate storage provider  
-- ✅ Pass the required parameters to the `gh bbs2gh` / GEI migration command  
-- ✅ Avoid using the `--use-github-storage` flag  
-
-> ⚠️ **Important:**  
-> If these variables are present in the environment, you **must NOT manually pass** `--use-github-storage` in any custom script overrides.  
-> External storage will automatically take precedence.
-
----
 ## Running the workflow
 
 1. Generate or update `repos.csv` and commit it to the repository.
